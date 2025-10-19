@@ -3,751 +3,855 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottery Ledger</title>
-    <!-- Google Fonts: Poppins -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Lottery Ledger – Md Imam</title>
+    <!-- Tailwind CSS for styling and responsiveness -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Poppins Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     
-    <!-- jsPDF Library for PDF Export -->
+    <!-- jsPDF and AutoTable for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf-autotable.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Custom CSS for Theming and Glassmorphism (Shifted from style.css) -->
     <style>
-        /* CSS STYLES */
+        /* Define CSS Variables for Light/Dark Mode */
         :root {
-            --bg-color: #f4f7fc;
-            --card-bg: rgba(255, 255, 255, 0.7);
-            --text-color: #1e293b;
-            --primary-color: #4f46e5;
-            --secondary-color: #10b981;
-            --border-color: rgba(226, 232, 240, 0.8);
-            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-            --font-family: 'Poppins', sans-serif;
+            --bg-color-light: #f7f7f7;
+            --text-color-light: #1f2937;
+            --card-bg-light: rgba(255, 255, 255, 0.5);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+        .dark-mode {
+            --bg-color-dark: #1f2937;
+            --text-color-dark: #f3f4f6;
         }
 
+        /* Base Body Styles and Transition */
         body {
-            font-family: var(--font-family);
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+            background-color: var(--bg-color-light);
+            color: var(--text-color-light);
+        }
+        .dark-mode body {
+            background-color: var(--bg-color-dark);
+            color: var(--text-color-dark);
         }
 
-        /* --- Main Layout & Navigation --- */
-        #app-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background-color: var(--card-bg-light);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px -1px var(--shadow-color);
+            backdrop-filter: blur(8px);
+        }
+        /* Glassmorphism Dark Mode Adjustments */
+        .dark-mode .glass-card {
+            background-color: rgba(55, 65, 81, 0.4);
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
         }
 
-        header h1 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 20px;
+        /* FIX: Applying dark mode styles to input and select elements for full theme coverage */
+        .dark-mode input[type="number"], 
+        .dark-mode input[type="date"] {
+            background-color: #374151 !important; /* bg-gray-700 */
+            border-color: #4b5563 !important; /* border-gray-600 */
+            color: #f3f4f6 !important;
         }
 
-        nav {
-            display: flex;
-            justify-content: center;
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 10px;
-            margin-bottom: 30px;
+        /* Session Specific Colors (Glassmorphism Overlays) */
+        .session-morning { background-color: rgba(252, 211, 77, 0.2); } /* Yellow */
+        .session-day { background-color: rgba(96, 165, 250, 0.2); }    /* Blue */
+        .session-night { background-color: rgba(52, 211, 153, 0.2); }   /* Green */
+
+        /* Toast styles */
+        #toast-notification {
+            transition: opacity 0.3s ease-in-out;
         }
 
-        .nav-btn {
-            background-color: transparent;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-color);
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-btn.active {
-            background-color: var(--primary-color);
-            color: #fff;
-        }
-
-        /* --- Page Sections --- */
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        /* --- Daily Entry Page --- */
-        #daily-entry-page .date-header {
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-
-        .entry-grid {
-            display: grid;
-            gap: 20px;
-        }
-
-        .entry-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 15px;
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow);
-            padding: 20px;
-        }
-
-        .entry-card h2 {
-            margin-top: 0;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 10px;
-            font-size: 1.25rem;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-
-        .result {
-            margin-top: 15px;
-            font-weight: 600;
-        }
-
-        .result span {
-            color: var(--primary-color);
-            font-weight: 700;
-        }
-
-        #save-entry-btn {
-            background-color: var(--secondary-color);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            width: 100%;
-            margin-top: 20px;
-            font-weight: 600;
-        }
-
-        #save-entry-btn:hover {
-            background-color: #059669;
-        }
-
-        /* --- Report Page --- */
-        .report-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .report-controls input[type="date"] {
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            font-size: 1rem;
-        }
-
-        #export-pdf-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        
-        #report-table-container {
-            overflow-x: auto;
-            background: #fff;
-            border-radius: 12px;
-            padding: 10px;
-            box-shadow: var(--shadow);
-        }
-
-        #report-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        #report-table th, #report-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        #report-table th {
-            font-weight: 600;
-            background-color: #f8fafc;
-        }
-
-        #report-table tfoot td {
-            font-weight: 700;
-            background-color: #f1f5f9;
-        }
-
-        .edit-entry-btn {
-            background-color: #f59e0b;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        
-        /* --- Settings Page --- */
-        .settings-group {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: var(--shadow);
-        }
-
-        .settings-group h3 {
-            margin-top: 0;
-        }
-        
-        .btn-setting {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            border-radius: 8px;
-            border: none;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        #btn-save-rate { background-color: var(--primary-color); color: white; }
-        #btn-backup { background-color: #3b82f6; color: white; }
-        #btn-restore { background-color: #6366f1; color: white; }
-        #btn-clear { background-color: #ef4444; color: white; }
-
-        /* --- Utilities --- */
-        .hidden {
-            display: none;
-        }
-        
-        /* --- Toast Notification --- */
-        #toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #2d3748;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s, visibility 0.5s;
-        }
-        
-        #toast.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        /* --- Responsive Design --- */
-        @media (min-width: 640px) {
-            .entry-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+        /* Responsive Layout for Inputs */
+        .input-group > * {
+            flex-grow: 1;
+            min-width: 120px;
         }
     </style>
 </head>
-<body>
-
-    <div id="app-container">
-        <header>
-            <h1>Lottery Ledger</h1>
+<body class="min-h-screen">
+    <div id="app" class="max-w-4xl mx-auto p-4 md:p-8">
+        <!-- Header & Offline Status -->
+        <header class="mb-6 flex justify-between items-center border-b pb-3">
+            <h1 class="text-2xl md:text-3xl font-bold text-indigo-600">
+                Lottery Ledger
+            </h1>
+            <!-- Status Indicator (Now just a visual element, PWA features removed) -->
+            <div id="offline-status" class="flex items-center text-sm">
+                <span id="status-dot" class="w-3 h-3 rounded-full mr-2 bg-green-500"></span>
+                <span id="status-text">Online</span>
+            </div>
         </header>
 
-        <nav>
-            <button class="nav-btn active" data-page="daily-entry-page">Daily Entry</button>
-            <button class="nav-btn" data-page="report-page">Weekly Report</button>
-            <button class="nav-btn" data-page="settings-page">Settings</button>
+        <!-- Navigation -->
+        <nav class="flex justify-around bg-white/50 dark:bg-gray-800/50 p-2 rounded-xl shadow-lg mb-6">
+            <button onclick="navigate('home')" id="nav-home" class="nav-btn bg-indigo-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-600 transition duration-150">
+                🏠 Daily Entry
+            </button>
+            <button onclick="navigate('report')" id="nav-report" class="nav-btn text-gray-700 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-150">
+                📊 Weekly Report
+            </button>
+            <button onclick="navigate('settings')" id="nav-settings" class="nav-btn text-gray-700 dark:text-gray-300 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-150">
+                ⚙️ Settings
+            </button>
         </nav>
 
-        <main>
-            <!-- Page 1: Daily Entry -->
-            <section id="daily-entry-page" class="page active">
-                <p id="date-header" class="date-header"></p>
-                <div class="entry-grid">
-                    <div class="entry-card" id="morning">
-                        <h2>Morning ☀️</h2>
-                        <div class="form-group">
-                            <label for="morning-in">Tickets In</label>
-                            <input type="number" id="morning-in" placeholder="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="morning-return">Tickets Return</label>
-                            <input type="number" id="morning-return" placeholder="0">
-                        </div>
-                        <div class="result">
-                            <p>Sold: <span id="morning-sold">0</span></p>
-                            <p>Total: ₹<span id="morning-total">0.00</span></p>
-                        </div>
-                    </div>
-                    <div class="entry-card" id="day">
-                        <h2>Day 🌤️</h2>
-                        <div class="form-group">
-                            <label for="day-in">Tickets In</label>
-                            <input type="number" id="day-in" placeholder="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="day-return">Tickets Return</label>
-                            <input type="number" id="day-return" placeholder="0">
-                        </div>
-                        <div class="result">
-                            <p>Sold: <span id="day-sold">0</span></p>
-                            <p>Total: ₹<span id="day-total">0.00</span></p>
-                        </div>
-                    </div>
-                    <div class="entry-card" id="night">
-                        <h2>Night 🌙</h2>
-                        <div class="form-group">
-                            <label for="night-in">Tickets In</label>
-                            <input type="number" id="night-in" placeholder="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="night-return">Tickets Return</label>
-                            <input type="number" id="night-return" placeholder="0">
-                        </div>
-                        <div class="result">
-                            <p>Sold: <span id="night-sold">0</span></p>
-                            <p>Total: ₹<span id="night-total">0.00</span></p>
-                        </div>
-                    </div>
-                </div>
-                <button id="save-entry-btn">Save Entry</button>
-            </section>
+        <!-- Main Content Area -->
+        <div id="content-area">
+            <!-- Content will be rendered here by JavaScript -->
+        </div>
 
-            <!-- Page 2: Weekly Report -->
-            <section id="report-page" class="page">
-                <div class="report-controls">
-                    <label for="week-picker">Select Week:</label>
-                    <input type="date" id="week-picker">
-                    <button id="export-pdf-btn">Download PDF</button>
-                </div>
-                <div id="report-table-container">
-                    <table id="report-table">
-                        <thead></thead>
-                        <tbody></tbody>
-                        <tfoot></tfoot>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Page 3: Settings -->
-            <section id="settings-page" class="page">
-                <div class="settings-group">
-                    <h3>Ticket Rate</h3>
-                    <div class="form-group">
-                        <label for="ticket-rate">Rate per Ticket (e.g., 4.30)</label>
-                        <input type="number" id="ticket-rate" step="0.01">
-                    </div>
-                    <button id="btn-save-rate" class="btn-setting">Save Rate</button>
-                </div>
-                <div class="settings-group">
-                    <h3>Data Management</h3>
-                    <button id="btn-backup" class="btn-setting">Backup Data</button>
-                    <input type="file" id="restore-input" class="hidden">
-                    <button id="btn-restore" class="btn-setting">Restore from Backup</button>
-                    <button id="btn-clear" class="btn-setting">Clear All Data</button>
-                </div>
-            </section>
-        </main>
+        <!-- Toast Notification -->
+        <div id="toast-notification" class="fixed bottom-5 right-5 z-50 p-3 bg-green-500 text-white rounded-lg shadow-xl opacity-0">
+            Entry saved successfully!
+        </div>
     </div>
-    
-    <div id="toast"></div>
 
+    <!-- JavaScript Logic (Shifted from app.js) -->
     <script>
-        // JAVASCRIPT LOGIC
-        document.addEventListener('DOMContentLoaded', () => {
+        // Global App State
+        let currentPage = 'home';
+        let appData = {}; // Stores all daily entries: { 'YYYY-MM-DD': { m: {}, d: {}, n: {}, settled: false } }
+        let currentRate = 4.30;
+        let developerName = 'Md Imam / Aavid';
+        const APP_KEY = 'lotteryLedgerData';
+        const SETTINGS_KEY = 'lotteryLedgerSettings';
 
-            // --- DESTRUCTURE JSPDF ---
-            const { jsPDF } = window.jspdf;
+        // --- Utility Functions ---
 
-            // --- CONSTANTS ---
-            const DB_KEY = 'lotteryLedgerData';
-            const SETTINGS_KEY = 'lotteryLedgerSettings';
-            
-            // --- STATE ---
-            let currentDate = new Date(); // Holds the date for the entry page
-            
-            // --- SELECTORS ---
-            const navButtons = document.querySelectorAll('.nav-btn');
-            const pages = document.querySelectorAll('.page');
-            const toast = document.getElementById('toast');
-            
-            // --- INITIALIZATION ---
-            function init() {
-                setupNavigation();
-                setupDailyEntryPage();
-                setupReportPage();
-                setupSettingsPage();
-                
-                // Show default page
-                document.getElementById('daily-entry-page').classList.add('active');
+        /** Loads application settings from localStorage. */
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+            currentRate = parseFloat(settings.rate) || 4.30;
+            developerName = settings.developerName || 'Md Imam / Aavid';
+            // Apply theme based on loaded settings
+            if (settings.theme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+            } else {
+                document.documentElement.classList.remove('dark-mode');
             }
+        }
 
-            // --- UTILITY FUNCTIONS ---
-            const showToast = (message) => {
-                toast.textContent = message;
-                toast.classList.add('show');
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 3000);
+        /** Saves application settings to localStorage. */
+        function saveSettings() {
+            const settings = {
+                rate: currentRate,
+                developerName: developerName,
+                theme: document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light'
             };
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        }
 
-            const formatDate = (date) => date.toISOString().split('T')[0];
+        /** Loads all daily entry data from localStorage. */
+        function loadData() {
+            try {
+                appData = JSON.parse(localStorage.getItem(APP_KEY)) || {};
+            } catch (e) {
+                console.error("Error loading data from local storage:", e);
+                appData = {};
+            }
+        }
+
+        /** Saves all application data to localStorage. */
+        function saveData() {
+            localStorage.setItem(APP_KEY, JSON.stringify(appData));
+        }
+
+        // Date Utilities
+        function formatDate(date) {
+            return date.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+
+        function getMondayOfDate(dateString) {
+            const date = new Date(dateString);
+            const day = date.getDay();
+            // Calculate difference to Monday (1)
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1); 
+            const monday = new Date(date.setDate(diff));
+            // Reset time to ensure correct date comparison
+            monday.setHours(0, 0, 0, 0); 
+            return formatDate(monday);
+        }
+
+        function getWeekRange(dateString) {
+            const monday = new Date(getMondayOfDate(dateString));
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            const startDisplay = monday.toLocaleDateString('en-US', options);
+            const endDisplay = sunday.toLocaleDateString('en-US', options);
             
-            // --- STORAGE FUNCTIONS ---
-            const getSettings = () => JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { ticketRate: 4.30 };
-            const saveSettings = (settings) => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-            const getEntries = () => JSON.parse(localStorage.getItem(DB_KEY)) || [];
-            const saveEntries = (entries) => localStorage.setItem(DB_KEY, JSON.stringify(entries));
+            return {
+                start: formatDate(monday),
+                end: formatDate(sunday),
+                display: `${startDisplay} to ${endDisplay}`
+            };
+        }
 
-            // --- NAVIGATION ---
-            function setupNavigation() {
-                navButtons.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const targetPageId = btn.dataset.page;
-                        
-                        // Update active button
-                        navButtons.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        
-                        // Update active page
-                        pages.forEach(p => p.classList.remove('active'));
-                        document.getElementById(targetPageId).classList.add('active');
+        /** Displays a temporary notification message. */
+        function showToast(message, type = 'green') {
+            const toast = document.getElementById('toast-notification');
+            
+            // Reset classes
+            toast.className = 'fixed bottom-5 right-5 z-50 p-3 text-white rounded-lg shadow-xl opacity-0';
+            
+            let bgColor;
+            if (type === 'red') bgColor = 'bg-red-500';
+            else if (type === 'orange') bgColor = 'bg-orange-500';
+            else bgColor = 'bg-green-500';
+            
+            toast.textContent = message;
+            toast.classList.add(bgColor, 'opacity-100');
 
-                        // Refresh report when navigating to it
-                        if (targetPageId === 'report-page') {
-                            generateReport(new Date(document.getElementById('week-picker').value || Date.now()));
-                        }
-                    });
-                });
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        // --- Daily Entry Logic ---
+
+        /** Renders the Daily Entry form for the selected date. */
+        function renderDailyEntry() {
+            const today = formatDate(new Date());
+            // Get date from picker or default to today
+            const selectedDate = document.getElementById('date-picker')?.value || today; 
+            const entry = appData[selectedDate] || { m: {}, d: {}, n: {} };
+            
+            // Check settlement status based on the Monday of the selected date's week
+            const weekStart = getMondayOfDate(selectedDate);
+            const isSettled = appData[weekStart]?.settled === true; 
+            
+            const sessions = [
+                { id: 'm', name: 'Morning', color: 'session-morning', entry: entry.m },
+                { id: 'd', name: 'Day', color: 'session-day', entry: entry.d },
+                { id: 'n', name: 'Night', color: 'session-night', entry: entry.n }
+            ];
+
+            const isPastDate = selectedDate !== today;
+            const buttonText = appData[selectedDate] ? 'Update Entry' : 'Save Entry';
+            const buttonColor = appData[selectedDate] ? 'bg-orange-500 hover:bg-orange-600' : 'bg-indigo-500 hover:bg-indigo-600';
+            const disableInputs = isSettled;
+
+            let html = `
+                <div class="space-y-6">
+                    <h2 class="text-xl font-semibold border-b pb-2 mb-4">
+                        ${isPastDate ? `Date: ${selectedDate} ${isSettled ? '(Settled)' : '(Edit Mode)'}` : 'Today\'s Entry'}
+                    </h2>
+
+                    <!-- Date Picker -->
+                    <div class="flex flex-col md:flex-row items-center space-y-3 md:space-y-0 md:space-x-4 mb-6 p-4 glass-card rounded-xl">
+                        <label for="date-picker" class="font-medium whitespace-nowrap">Select Date:</label>
+                        <input type="date" id="date-picker" value="${selectedDate}"
+                                onchange="handleDateChange(this.value)"
+                                class="p-2 border rounded-lg w-full md:w-auto">
+                    </div>
+            `;
+
+            if (disableInputs) {
+                html += `<p class="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg font-medium text-center mb-4">
+                            🚫 This week has been settled. You cannot edit this entry.
+                        </p>`;
             }
 
-            // --- DAILY ENTRY PAGE LOGIC ---
-            function setupDailyEntryPage() {
-                const dateHeader = document.getElementById('date-header');
-                const saveButton = document.getElementById('save-entry-btn');
-                const sessionNames = ['morning', 'day', 'night'];
+            html += `
+                <form id="daily-entry-form" onsubmit="saveDailyEntry(event, '${selectedDate}')" class="space-y-6">
+            `;
 
-                const updateDateHeader = () => {
-                    dateHeader.textContent = currentDate.toLocaleDateString('en-GB', {
-                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                    });
-                };
+            sessions.forEach(session => {
+                const totalTickets = (session.entry.in || 0) - (session.entry.return || 0);
+                const totalRupees = (totalTickets * currentRate).toFixed(2);
                 
-                const calculateSession = (session) => {
-                    const rate = getSettings().ticketRate;
-                    const inVal = parseInt(document.getElementById(`${session}-in`).value) || 0;
-                    const returnVal = parseInt(document.getElementById(`${session}-return`).value) || 0;
-                    const soldVal = Math.max(0, inVal - returnVal);
-                    
-                    document.getElementById(`${session}-sold`).textContent = soldVal;
-                    document.getElementById(`${session}-total`).textContent = (soldVal * rate).toFixed(2);
-                };
+                html += `
+                    <div class="p-5 glass-card ${session.color} rounded-xl shadow-lg">
+                        <h3 class="text-lg font-bold mb-3 border-b pb-2">${session.name}</h3>
+                        
+                        <div class="flex flex-wrap gap-4 mb-4 input-group">
+                            <!-- Tickets In -->
+                            <div class="flex flex-col">
+                                <label for="${session.id}-in" class="text-sm font-medium">Tickets In</label>
+                                <input type="number" id="${session.id}-in" name="${session.id}-in"
+                                    value="${session.entry.in || ''}" placeholder="Ticket Count" min="0" required
+                                    oninput="calculateSessionTotal('${session.id}')"
+                                    ${disableInputs ? 'disabled' : ''}
+                                    class="p-2 border rounded-lg w-full">
+                            </div>
+                            
+                            <!-- Tickets Return -->
+                            <div class="flex flex-col">
+                                <label for="${session.id}-return" class="text-sm font-medium">Tickets Return</label>
+                                <input type="number" id="${session.id}-return" name="${session.id}-return"
+                                    value="${session.entry.return || ''}" placeholder="Return Count" min="0" required
+                                    oninput="calculateSessionTotal('${session.id}')"
+                                    ${disableInputs ? 'disabled' : ''}
+                                    class="p-2 border rounded-lg w-full">
+                            </div>
+                        </div>
 
-                const loadEntryForDate = () => {
-                    const dateStr = formatDate(currentDate);
-                    const entries = getEntries();
-                    const entry = entries.find(e => e.date === dateStr);
+                        <!-- Outputs -->
+                        <div class="flex flex-wrap gap-4 text-sm font-medium pt-3 border-t">
+                            <p>Total Tickets: <span id="${session.id}-total" class="font-bold">${totalTickets}</span></p>
+                            <p>Total Rupees (₹): <span id="${session.id}-rupees" class="font-bold text-green-700 dark:text-green-400">₹${totalRupees}</span></p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    <button type="submit" ${disableInputs ? 'disabled' : ''}
+                        class="w-full ${buttonColor} text-white font-bold py-3 px-4 rounded-xl shadow-lg transition duration-150 ${disableInputs ? 'opacity-50 cursor-not-allowed' : ''}">
+                        ${buttonText}
+                    </button>
+                </form>
+                </div>
+            `;
+            document.getElementById('content-area').innerHTML = html;
+            // Set date picker value after rendering
+            document.getElementById('date-picker').value = selectedDate;
+        }
 
-                    sessionNames.forEach(session => {
-                        const inEl = document.getElementById(`${session}-in`);
-                        const returnEl = document.getElementById(`${session}-return`);
-                        if (entry && entry.sessions[session]) {
-                            inEl.value = entry.sessions[session].in || '';
-                            returnEl.value = entry.sessions[session].return || '';
-                        } else {
-                            inEl.value = '';
-                            returnEl.value = '';
-                        }
-                        calculateSession(session);
-                    });
-                };
+        /** Calculates and updates total tickets and rupees for a session. */
+        function calculateSessionTotal(sessionId) {
+            const inputIn = document.getElementById(`${sessionId}-in`);
+            const inputReturn = document.getElementById(`${sessionId}-return`);
+            const totalSpan = document.getElementById(`${sessionId}-total`);
+            const rupeesSpan = document.getElementById(`${sessionId}-rupees`);
 
-                const handleSave = () => {
-                    const dateStr = formatDate(currentDate);
-                    let entries = getEntries();
-                    const entryIndex = entries.findIndex(e => e.date === dateStr);
-                    
-                    const newEntryData = {
-                        sessions: {
-                            morning: { in: parseInt(document.getElementById('morning-in').value) || 0, return: parseInt(document.getElementById('morning-return').value) || 0 },
-                            day: { in: parseInt(document.getElementById('day-in').value) || 0, return: parseInt(document.getElementById('day-return').value) || 0 },
-                            night: { in: parseInt(document.getElementById('night-in').value) || 0, return: parseInt(document.getElementById('night-return').value) || 0 }
-                        }
-                    };
+            const ticketsIn = parseFloat(inputIn.value) || 0;
+            const ticketsReturn = parseFloat(inputReturn.value) || 0;
 
-                    if (entryIndex > -1) {
-                        entries[entryIndex] = { date: dateStr, ...newEntryData };
-                    } else {
-                        entries.push({ date: dateStr, ...newEntryData });
-                    }
+            const totalTickets = ticketsIn - ticketsReturn;
+            const totalRupees = (totalTickets * currentRate).toFixed(2);
 
-                    saveEntries(entries);
-                    showToast(`Entry for ${dateStr} saved successfully!`);
-                };
+            totalSpan.textContent = totalTickets;
+            rupeesSpan.textContent = `₹${totalRupees}`;
+        }
+
+        /** Re-renders the form when the date is changed in the date picker. */
+        function handleDateChange(dateString) {
+            renderDailyEntry();
+        }
+
+        /** Saves or Updates the entry for the selected date. */
+        function saveDailyEntry(event, dateString) {
+            event.preventDefault();
+
+            const weekStart = getMondayOfDate(dateString);
+            if (appData[weekStart] && appData[weekStart].settled) {
+                showToast("🚫 This week is settled. The entry cannot be updated.", 'red');
+                return;
+            }
+
+            const newEntry = { m: {}, d: {}, n: {} };
+            let hasData = false;
+
+            ['m', 'd', 'n'].forEach(id => {
+                const ticketsIn = parseFloat(document.getElementById(`${id}-in`).value) || 0;
+                const ticketsReturn = parseFloat(document.getElementById(`${id}-return`).value) || 0;
+
+                newEntry[id] = { in: ticketsIn, return: ticketsReturn };
+                if (ticketsIn > 0 || ticketsReturn > 0) {
+                    hasData = true;
+                }
+            });
+            
+            if (hasData) {
+                // Keep the settled status if it exists and we are updating
+                newEntry.settled = appData[dateString] ? appData[dateString].settled : false;
+                appData[dateString] = newEntry;
                 
-                // Event Listeners
-                sessionNames.forEach(session => {
-                    ['in', 'return'].forEach(type => {
-                        document.getElementById(`${session}-${type}`).addEventListener('input', () => calculateSession(session));
-                    });
-                });
-                saveButton.addEventListener('click', handleSave);
-
-                // Check for edit request from session storage
-                const editDate = sessionStorage.getItem('editDate');
-                if (editDate) {
-                    currentDate = new Date(editDate);
-                    sessionStorage.removeItem('editDate');
+                // Ensure the week start date has an entry to track settlement status
+                if (!appData[weekStart]) {
+                    appData[weekStart] = { m: {}, d: {}, n: {}, settled: false };
                 }
                 
-                updateDateHeader();
-                loadEntryForDate();
+                saveData();
+                showToast("Entry saved/updated successfully!");
+                renderDailyEntry(); 
+            } else {
+                showToast("Please enter data in at least one session.", 'red');
             }
+        }
 
-            // --- REPORT PAGE LOGIC ---
-            function setupReportPage() {
-                const weekPicker = document.getElementById('week-picker');
-                const exportPdfBtn = document.getElementById('export-pdf-btn');
 
-                weekPicker.value = formatDate(new Date());
-                weekPicker.addEventListener('change', () => generateReport(new Date(weekPicker.value)));
-                exportPdfBtn.addEventListener('click', exportToPDF);
+        // --- Weekly Report Logic ---
 
-                generateReport(new Date()); // Initial report for current week
-            }
+        /** Renders the Weekly Report table and controls. */
+        function renderWeeklyReport() {
+            const today = formatDate(new Date());
+            
+            // Get the week's starting date (Monday)
+            const weekInputDate = document.getElementById('week-start-date')?.value || getMondayOfDate(today); 
+            const weekRange = getWeekRange(weekInputDate);
+            
+            // Check settlement status based on the Monday of the selected week
+            const isSettled = appData[weekRange.start]?.settled === true; 
+            
+            let dateCursor = new Date(weekRange.start);
+            let rows = [];
+            let grandTotalTickets = 0;
+            let grandTotalRupees = 0;
 
-            function generateReport(selectedDate) {
-                const rate = getSettings().ticketRate;
-                const dayOfWeek = selectedDate.getDay();
-                const startOfWeek = new Date(selectedDate);
-                // Adjust to start of the week (Monday)
-                startOfWeek.setDate(selectedDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-
-                const tableBody = document.querySelector('#report-table tbody');
-                const tableFoot = document.querySelector('#report-table tfoot');
-                const tableHead = document.querySelector('#report-table thead');
+            // Generate rows for the entire week (Mon to Sun)
+            for (let i = 0; i < 7; i++) {
+                const dateString = formatDate(dateCursor);
+                const entry = appData[dateString] || { m: {}, d: {}, n: {} };
+                const dayName = dateCursor.toLocaleDateString('en-US', { weekday: 'short' });
                 
-                tableHead.innerHTML = `
-                    <tr>
-                        <th>Date</th>
-                        <th>Session</th>
-                        <th>In</th>
-                        <th>Return</th>
-                        <th>Sold</th>
-                        <th>Amount (₹)</th>
-                        <th>Action</th>
-                    </tr>`;
-                tableBody.innerHTML = ''; // Clear previous report
+                const sessionTotal = (session) => {
+                    const tickets = (entry[session].in || 0) - (entry[session].return || 0);
+                    return { tickets, rupees: tickets * currentRate };
+                };
 
-                let weekTotals = { in: 0, return: 0, sold: 0, amount: 0 };
+                const mTotal = sessionTotal('m');
+                const dTotal = sessionTotal('d');
+                const nTotal = sessionTotal('n');
 
-                for (let i = 0; i < 7; i++) {
-                    const day = new Date(startOfWeek);
-                    day.setDate(startOfWeek.getDate() + i);
-                    const dateStr = formatDate(day);
-                    
-                    const entry = getEntries().find(e => e.date === dateStr);
-                    let dayTotals = { in: 0, return: 0, sold: 0, amount: 0 };
-                    
-                    let dayHtml = '';
-                    ['morning', 'day', 'night'].forEach(session => {
-                        const s_in = entry?.sessions[session]?.in || 0;
-                        const s_ret = entry?.sessions[session]?.return || 0;
-                        const s_sold = s_in - s_ret;
-                        const s_amt = s_sold * rate;
+                const dailyTotalTickets = mTotal.tickets + dTotal.tickets + nTotal.tickets;
+                const dailyTotalRupees = mTotal.rupees + dTotal.rupees + nTotal.rupees;
 
-                        dayTotals.in += s_in;
-                        dayTotals.return += s_ret;
-                        dayTotals.sold += s_sold;
-                        dayTotals.amount += s_amt;
-                        
-                        dayHtml += `
-                            <tr>
-                                ${session === 'morning' ? `<td rowspan="4" style="vertical-align: top;">${day.toLocaleDateString('en-GB', {day: '2-digit', month:'short'})}<br>${day.toLocaleDateString('en-GB', {weekday: 'short'})}</td>` : ''}
-                                <td>${session.charAt(0).toUpperCase() + session.slice(1)}</td>
-                                <td>${s_in}</td>
-                                <td>${s_ret}</td>
-                                <td>${s_sold}</td>
-                                <td>${s_amt.toFixed(2)}</td>
-                                ${session === 'morning' ? `<td rowspan="4" style="vertical-align: middle;"><button class="edit-entry-btn" data-date="${dateStr}">Edit</button></td>` : ''}
-                            </tr>`;
-                    });
-                    
-                    dayHtml += `<tr style="font-weight: bold; background-color: #f8fafc;"><td>Total</td><td>${dayTotals.in}</td><td>${dayTotals.return}</td><td>${dayTotals.sold}</td><td>${dayTotals.amount.toFixed(2)}</td></tr>`;
-                    tableBody.innerHTML += dayHtml;
+                grandTotalTickets += dailyTotalTickets;
+                grandTotalRupees += dailyTotalRupees;
 
-                    weekTotals.in += dayTotals.in;
-                    weekTotals.return += dayTotals.return;
-                    weekTotals.sold += dayTotals.sold;
-                    weekTotals.amount += dayTotals.amount;
-                }
-                
-                tableFoot.innerHTML = `
-                    <tr>
-                        <td colspan="2">Grand Total</td>
-                        <td>${weekTotals.in}</td>
-                        <td>${weekTotals.return}</td>
-                        <td>${weekTotals.sold}</td>
-                        <td>${weekTotals.amount.toFixed(2)}</td>
-                        <td></td>
-                    </tr>`;
-
-                // Add event listeners to new edit buttons
-                document.querySelectorAll('.edit-entry-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        sessionStorage.setItem('editDate', e.target.dataset.date);
-                        window.location.reload(); // Simple way to re-initiate the entry page with the date
-                    });
+                rows.push({
+                    date: `${dateString.substring(5)} (${dayName})`, // MM-DD (Day)
+                    mIn: entry.m.in || 0, mRet: entry.m.return || 0, mTotal: mTotal.tickets,
+                    dIn: entry.d.in || 0, dRet: entry.d.return || 0, dTotal: dTotal.tickets,
+                    nIn: entry.n.in || 0, nRet: entry.n.return || 0, nTotal: nTotal.tickets,
+                    totalRupees: `₹${dailyTotalRupees.toFixed(2)}`,
                 });
+
+                dateCursor.setDate(dateCursor.getDate() + 1);
+            }
+
+            // HTML Structure
+            let html = `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Weekly Report – ${developerName.split('/')[0].trim()}</h2>
+
+                    <!-- Week Picker & Range Display -->
+                    <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 p-4 glass-card rounded-xl shadow-lg mb-6">
+                        <label for="week-start-date" class="font-medium whitespace-nowrap">Select Week Start (Monday):</label>
+                        <input type="date" id="week-start-date" value="${weekRange.start}"
+                                onchange="renderWeeklyReport()"
+                                class="p-2 border rounded-lg">
+                        <p class="text-lg font-semibold text-indigo-600 dark:text-indigo-400">
+                            Week: ${weekRange.display}
+                        </p>
+                    </div>
+
+                    ${isSettled ? `
+                        <p class="p-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-lg font-medium text-center">
+                            ✅ This week's settlement is complete.
+                        </p>
+                    ` : ''}
+
+                    <!-- Report Table -->
+                    <div class="overflow-x-auto shadow-xl rounded-xl">
+                        <table id="weekly-report-table" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th rowspan="2" class="p-2 border-r border-gray-200 dark:border-gray-600">Date</th>
+                                    <th colspan="3" class="p-2 border-r border-gray-200 dark:border-gray-600 session-morning bg-yellow-300/50">Morning (M)</th>
+                                    <th colspan="3" class="p-2 border-r border-gray-200 dark:border-gray-600 session-day bg-blue-300/50">Day (D)</th>
+                                    <th colspan="3" class="p-2 border-r border-gray-200 dark:border-gray-600 session-night bg-green-300/50">Night (N)</th>
+                                    <th rowspan="2" class="p-2">Total ₹</th>
+                                </tr>
+                                <tr>
+                                    <th class="p-2 bg-green-200/50">In</th>
+                                    <th class="p-2 bg-red-200/50">Ret</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600 font-bold">Total</th>
+                                    <th class="p-2 bg-green-200/50">In</th>
+                                    <th class="p-2 bg-red-200/50">Ret</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600 font-bold">Total</th>
+                                    <th class="p-2 bg-green-200/50">In</th>
+                                    <th class="p-2 bg-red-200/50">Ret</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600 font-bold">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                                ${rows.map(row => `
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        <td class="p-2 font-medium">${row.date}</td>
+                                        <td class="p-2 text-right session-morning">${row.mIn}</td>
+                                        <td class="p-2 text-right session-morning">${row.mRet}</td>
+                                        <td class="p-2 text-right font-bold session-morning">${row.mTotal}</td>
+                                        <td class="p-2 text-right session-day">${row.dIn}</td>
+                                        <td class="p-2 text-right session-day">${row.dRet}</td>
+                                        <td class="p-2 text-right font-bold session-day">${row.dTotal}</td>
+                                        <td class="p-2 text-right session-night">${row.nIn}</td>
+                                        <td class="p-2 text-right session-night">${row.nRet}</td>
+                                        <td class="p-2 text-right font-bold session-night">${row.nTotal}</td>
+                                        <td class="p-2 text-right font-extrabold text-indigo-700 dark:text-indigo-400">${row.totalRupees}</td>
+                                    </tr>
+                                `).join('')}
+                                
+                                <!-- Grand Total Row -->
+                                <tr class="bg-gray-200 dark:bg-gray-700 font-extrabold border-t-2 border-indigo-500">
+                                    <td colspan="10" class="p-3 text-right text-lg">Grand Total Weekly Collection</td>
+                                    <td class="p-3 text-right text-lg text-red-700 dark:text-red-400">
+                                        ₹${grandTotalRupees.toFixed(2)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col md:flex-row justify-center gap-4 mt-6">
+                        <button onclick="exportWeeklyReportPDF('${weekRange.start}')"
+                            class="flex-1 max-w-sm bg-red-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:bg-red-700 transition duration-150">
+                            📄 Export Report PDF
+                        </button>
+                        <button onclick="finalizeSettlement('${weekRange.start}', ${isSettled})"
+                            class="flex-1 max-w-sm ${isSettled ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-bold py-3 px-4 rounded-xl shadow-lg transition duration-150"
+                            ${isSettled ? 'disabled' : ''}>
+                            ${isSettled ? '✅ Settlement Completed' : '🔒 Finalize Week\'s Settlement'}
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('content-area').innerHTML = html;
+        }
+
+        /** Locks the entire week's data to prevent future edits. */
+        function finalizeSettlement(mondayDate, isSettled) {
+            if (isSettled) return;
+
+            if (!confirm(`Are you sure you want to FINALISE the settlement for the week: ${getWeekRange(mondayDate).display}? Data will be LOCKED and cannot be edited afterwards.`)) {
+                return;
             }
             
-            function exportToPDF() {
-                const doc = new jsPDF();
-                const selectedDate = new Date(document.getElementById('week-picker').value);
-                 const dayOfWeek = selectedDate.getDay();
-                const startOfWeek = new Date(selectedDate);
-                startOfWeek.setDate(selectedDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-                const endOfWeek = new Date(startOfWeek);
-                endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-
-                doc.text("Weekly Lottery Sales Report", 14, 16);
-                doc.setFontSize(10);
-                doc.text(`Week: ${startOfWeek.toLocaleDateString('en-GB')} to ${endOfWeek.toLocaleDateString('en-GB')}`, 14, 22);
-                
-                doc.autoTable({
-                    html: '#report-table',
-                    startY: 28,
-                    theme: 'grid',
-                    headStyles: { fillColor: [79, 70, 229] },
-                    footStyles: { fillColor: [241, 245, 249], textColor: '#000', fontStyle: 'bold' }
-                });
-                
-                doc.save(`lottery-report-${formatDate(startOfWeek)}.pdf`);
+            // Ensure an entry exists for the Monday of the week before setting settled to true
+            if (!appData[mondayDate]) {
+                appData[mondayDate] = { m: {}, d: {}, n: {}, settled: true };
+            } else {
+                appData[mondayDate].settled = true;
             }
 
-            // --- SETTINGS PAGE LOGIC ---
-            function setupSettingsPage() {
-                const rateInput = document.getElementById('ticket-rate');
-                const saveRateBtn = document.getElementById('btn-save-rate');
-                const backupBtn = document.getElementById('btn-backup');
-                const restoreBtn = document.getElementById('btn-restore');
-                const restoreInput = document.getElementById('restore-input');
-                const clearBtn = document.getElementById('btn-clear');
+            saveData();
+            showToast("Week's settlement successfully finalized!");
+            renderWeeklyReport();
+        }
+
+        /** Generates and exports the weekly report as a landscape PDF. */
+        function exportWeeklyReportPDF(mondayDate) {
+            const { jsPDF } = window.jspdf;
+            // Set font to Times-Roman which is available by default and supports Latin characters
+            const doc = new jsPDF({ 
+                orientation: 'landscape', 
+                unit: 'pt',
+                format: 'a4'
+            });
+
+            const rate = currentRate;
+            const weekRange = getWeekRange(mondayDate);
+            const reportDate = new Date().toLocaleDateString('en-US');
+
+            // PDF Headers (English)
+            const headers = [
+                [{ content: 'Date', rowSpan: 2 }, 
+                { content: 'Morning (M)', colSpan: 3, styles: { fillColor: [252, 211, 77] } },
+                { content: 'Day (D)', colSpan: 3, styles: { fillColor: [96, 165, 250] } },
+                { content: 'Night (N)', colSpan: 3, styles: { fillColor: [52, 211, 153] } },
+                { content: 'Total ₹ (INR)', rowSpan: 2 }
+                ],
+                ['In', 'Return', 'Total', 'In', 'Return', 'Total', 'In', 'Return', 'Total']
+            ];
+
+            const tableData = [];
+            let dateCursor = new Date(mondayDate);
+            let grandTotalRupees = 0;
+
+            for (let i = 0; i < 7; i++) {
+                const dateString = formatDate(dateCursor);
+                const entry = appData[dateString] || { m: {}, d: {}, n: {} };
+
+                const sessionTotal = (session) => {
+                    const tickets = (entry[session].in || 0) - (entry[session].return || 0);
+                    return { tickets, rupees: tickets * rate };
+                };
+
+                const mTotal = sessionTotal('m');
+                const dTotal = sessionTotal('d');
+                const nTotal = sessionTotal('n');
+                const dailyTotalRupees = mTotal.rupees + dTotal.rupees + nTotal.rupees;
+                grandTotalRupees += dailyTotalRupees;
+
+                tableData.push([
+                    dateString, // Use YYYY-MM-DD for consistency in PDF
+                    entry.m.in || 0, entry.m.return || 0, mTotal.tickets,
+                    entry.d.in || 0, entry.d.return || 0, dTotal.tickets,
+                    entry.n.in || 0, entry.n.return || 0, nTotal.tickets,
+                    `₹${dailyTotalRupees.toFixed(2)}`
+                ]);
                 
-                rateInput.value = getSettings().ticketRate;
+                dateCursor.setDate(dateCursor.getDate() + 1);
+            }
 
-                saveRateBtn.addEventListener('click', () => {
-                    const newRate = parseFloat(rateInput.value);
-                    if (newRate > 0) {
-                        saveSettings({ ticketRate: newRate });
-                        showToast('Ticket rate updated!');
-                    } else {
-                        showToast('Please enter a valid rate.');
-                    }
-                });
+            // Document Title
+            doc.setFont('Times-Roman', 'bold');
+            doc.setFontSize(18);
+            doc.text('Weekly Ticket Sales Report', doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+            
+            // Details
+            doc.setFont('Times-Roman', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Name: ${developerName.split('/')[0].trim()}`, 40, 50);
+            doc.text(`Week: ${weekRange.display}`, 40, 65);
+            doc.text(`Rate: ₹${rate}`, 40, 80);
+            doc.text(`Report Date: ${reportDate}`, doc.internal.pageSize.getWidth() - 40, 50, { align: 'right' });
 
-                backupBtn.addEventListener('click', () => {
-                    const data = {
-                        entries: getEntries(),
-                        settings: getSettings()
-                    };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `lottery-ledger-backup-${formatDate(new Date())}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    showToast('Backup file created.');
-                });
 
-                restoreBtn.addEventListener('click', () => restoreInput.click());
-                restoreInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
+            // Table generation
+            doc.autoTable({
+                startY: 95,
+                head: headers,
+                body: tableData,
+                theme: 'striped',
+                headStyles: { 
+                    fillColor: [200, 200, 200], // Light Gray
+                    textColor: [30, 30, 30],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    font: 'Times-Roman', // Use a standard font for stability
+                    fontSize: 8,
+                    halign: 'center',
+                    minCellHeight: 15
+                },
+                columnStyles: {
+                    0: { halign: 'left' },
+                    9: { halign: 'right', fontStyle: 'bold', textColor: [220, 38, 38] } // Total ₹
+                },
+                foot: [[
+                    { content: 'Grand Total Weekly Collection', colSpan: 10, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10 } },
+                    { content: `₹${grandTotalRupees.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold', fontSize: 10, fillColor: [255, 230, 230], textColor: [220, 38, 38] } }
+                ]]
+            });
+
+            doc.save(`Lottery_Report_${weekRange.start}_${weekRange.end}.pdf`);
+            showToast("PDF report successfully exported!");
+        }
+
+        // --- Settings Logic ---
+
+        /** Renders the Settings page. */
+        function renderSettings() {
+            const isDarkMode = document.documentElement.classList.contains('dark-mode');
+
+            let html = `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-bold border-b pb-2 mb-4 text-center">⚙️ Settings</h2>
+
+                    <!-- Ticket Rate -->
+                    <div class="p-5 glass-card rounded-xl shadow-lg">
+                        <h3 class="text-lg font-bold mb-3">Ticket Rate</h3>
+                        <div class="flex items-center space-x-4">
+                            <label for="ticket-rate" class="font-medium">₹</label>
+                            <input type="number" id="ticket-rate" value="${currentRate}" step="0.01" min="0"
+                                class="p-2 border rounded-lg w-full max-w-xs" onchange="updateRate(this.value)">
+                        </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Current Rate: ₹${currentRate}</p>
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <div class="p-5 glass-card rounded-xl shadow-lg flex justify-between items-center">
+                        <h3 class="text-lg font-bold">Theme</h3>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" value="" class="sr-only peer" ${isDarkMode ? 'checked' : ''} onchange="toggleTheme()">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">${isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
+                        </label>
+                    </div>
                     
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const data = JSON.parse(event.target.result);
-                            if (data.entries && data.settings) {
-                                saveEntries(data.entries);
-                                saveSettings(data.settings);
-                                showToast('Data restored successfully!');
-                                setTimeout(() => window.location.reload(), 1000);
-                            } else {
-                                showToast('Invalid backup file.');
-                            }
-                        } catch (err) {
-                            showToast('Error reading backup file.');
-                        }
-                    };
-                    reader.readAsText(file);
-                });
+                    <!-- Data Management -->
+                    <div class="p-5 glass-card rounded-xl shadow-lg space-y-4">
+                        <h3 class="text-lg font-bold border-b pb-2">Data Management</h3>
+                        
+                        <button onclick="exportDataCSV()" class="w-full bg-blue-500 text-white font-bold py-2 rounded-lg hover:bg-blue-600 transition duration-150">
+                            💾 Export Data (CSV)
+                        </button>
+                        
+                        <button onclick="document.getElementById('import-file').click()" class="w-full bg-yellow-500 text-white font-bold py-2 rounded-lg hover:bg-yellow-600 transition duration-150">
+                            📥 Import Data (CSV)
+                        </button>
+                        <input type="file" id="import-file" accept=".csv" class="hidden" onchange="importDataCSV(event)">
 
-                clearBtn.addEventListener('click', () => {
-                    if (confirm('Are you sure you want to delete ALL data? This cannot be undone.')) {
-                        localStorage.removeItem(DB_KEY);
-                        localStorage.removeItem(SETTINGS_KEY);
-                        showToast('All data has been cleared.');
-                        setTimeout(() => window.location.reload(), 1000);
-                    }
+                        <button onclick="clearOldRecords()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg hover:bg-red-600 transition duration-150">
+                            🗑️ Clear Records Older Than 30 Days
+                        </button>
+                    </div>
+
+                    <!-- App Info -->
+                    <div class="p-5 glass-card rounded-xl shadow-lg text-center">
+                        <p class="font-bold">App Info</p>
+                        <p>Version: v1.0</p>
+                        <p>Developer: ${developerName}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('content-area').innerHTML = html;
+        }
+
+        /** Updates the ticket rate and saves settings. */
+        function updateRate(newRate) {
+            currentRate = parseFloat(newRate) || 4.30;
+            saveSettings();
+            showToast(`Ticket Rate updated: ₹${currentRate}`, 'orange');
+        }
+
+        /** Toggles between light and dark mode and saves settings. */
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark-mode');
+            saveSettings();
+            showToast("Theme changed!");
+            // Re-render the current page to ensure dynamic colors/styles are updated
+            navigate(currentPage);
+        }
+
+        /** Exports all application data to a CSV file. */
+        function exportDataCSV() {
+            let csv = 'Date,Session,In,Return,TotalTickets,TotalRupees,Settled\n';
+            const dates = Object.keys(appData).sort();
+
+            dates.forEach(date => {
+                const entry = appData[date];
+                const sessions = { m: 'Morning', d: 'Day', n: 'Night' };
+
+                Object.keys(sessions).forEach(key => {
+                    const data = entry[key] || {};
+                    const totalTickets = (data.in || 0) - (data.return || 0);
+                    const totalRupees = totalTickets * currentRate;
+
+                    csv += `${date},${sessions[key]},${data.in || 0},${data.return || 0},${totalTickets},${totalRupees.toFixed(2)},${entry.settled ? 'Yes' : 'No'}\n`;
                 });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'lottery_ledger_backup.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Data exported to CSV successfully!");
+        }
+
+        /** Imports data from a user-selected CSV file. */
+        function importDataCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csv = e.target.result;
+                const lines = csv.split('\n').filter(line => line.trim() !== '');
+                if (lines.length < 2) {
+                    showToast("Invalid CSV file format.", 'red');
+                    return;
+                }
+                
+                // Skip header line
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(',');
+                    if (cols.length >= 7) {
+                        const [date, sessionName, ticketsIn, ticketsReturn, , , settledStr] = cols;
+                        const sessionKey = sessionName.toLowerCase().charAt(0); // m, d, or n
+
+                        if (!appData[date]) {
+                            appData[date] = { m: {}, d: {}, n: {}, settled: false };
+                        }
+                        
+                        appData[date][sessionKey] = {
+                            in: parseFloat(ticketsIn),
+                            return: parseFloat(ticketsReturn)
+                        };
+                        
+                        if (settledStr.trim().toLowerCase() === 'yes') {
+                            appData[date].settled = true;
+                        }
+                    }
+                }
+                saveData();
+                showToast("Data imported successfully!");
+                navigate('home'); // Go to home after import
+            };
+            reader.readAsText(file);
+        }
+
+        /** Clears records older than 30 days from localStorage. */
+        function clearOldRecords() {
+            if (!confirm('Are you sure you want to delete all records older than 30 days from local storage? This action is permanent.')) {
+                return;
             }
 
-            // Start the application
-            init();
-        });
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const cutoffDate = formatDate(thirtyDaysAgo);
+            let cleanedCount = 0;
+
+            const newAppData = {};
+            for (const date in appData) {
+                if (date >= cutoffDate) {
+                    newAppData[date] = appData[date];
+                } else {
+                    cleanedCount++;
+                }
+            }
+            appData = newAppData;
+            saveData();
+            showToast(`${cleanedCount} old records cleared!`);
+        }
+
+        // --- Navigation and Initialization ---
+
+        /** Handles navigation between app pages (home, report, settings). */
+        function navigate(page) {
+            currentPage = page;
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                // Reset non-selected button styles
+                btn.classList.remove('bg-indigo-500', 'text-white', 'shadow-md');
+                btn.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
+            });
+
+            // Set selected button styles
+            document.getElementById(`nav-${page}`).classList.add('bg-indigo-500', 'text-white', 'shadow-md');
+            document.getElementById(`nav-${page}`).classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
+
+            if (page === 'home') {
+                renderDailyEntry();
+            } else if (page === 'report') {
+                renderWeeklyReport();
+            } else if (page === 'settings') {
+                renderSettings();
+            }
+        }
+
+        // Initialization on window load
+        window.onload = function() {
+            loadSettings();
+            loadData();
+            navigate(currentPage);
+            
+            // The status indicator is now purely visual and 'Online'
+            document.getElementById('status-dot').classList.remove('bg-gray-400');
+            document.getElementById('status-dot').classList.add('bg-green-500');
+            document.getElementById('status-text').textContent = 'Online';
+        };
     </script>
-
 </body>
 </html>
