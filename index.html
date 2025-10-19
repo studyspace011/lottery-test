@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottery Ledger</title>
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- jsPDF Library for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf-autotable.min.js"></script>
+
+    <style>
+        /* CSS STYLES */
+        :root {
+            --bg-color: #f4f7fc;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --text-color: #1e293b;
+            --primary-color: #4f46e5;
+            --secondary-color: #10b981;
+            --border-color: rgba(226, 232, 240, 0.8);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            --font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* --- Main Layout & Navigation --- */
+        #app-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+
+        .nav-btn {
+            background-color: transparent;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-color);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn.active {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        /* --- Page Sections --- */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* --- Daily Entry Page --- */
+        #daily-entry-page .date-header {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .entry-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .entry-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .entry-card h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+            font-size: 1.25rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .result {
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .result span {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        #save-entry-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+
+        #save-entry-btn:hover {
+            background-color: #059669;
+        }
+
+        /* --- Report Page --- */
+        .report-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .report-controls input[type="date"] {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+        }
+
+        #export-pdf-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        #report-table-container {
+            overflow-x: auto;
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        #report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        #report-table th, #report-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        #report-table th {
+            font-weight: 600;
+            background-color: #f8fafc;
+        }
+
+        #report-table tfoot td {
+            font-weight: 700;
+            background-color: #f1f5f9;
+        }
+
+        .edit-entry-btn {
+            background-color: #f59e0b;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        /* --- Settings Page --- */
+        .settings-group {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .settings-group h3 {
+            margin-top: 0;
+        }
+        
+        .btn-setting {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        #btn-save-rate { background-color: var(--primary-color); color: white; }
+        #btn-backup { background-color: #3b82f6; color: white; }
+        #btn-restore { background-color: #6366f1; color: white; }
+        #btn-clear { background-color: #ef4444; color: white; }
+
+        /* --- Utilities --- */
+        .hidden {
+            display: none;
+        }
+        
+        /* --- Toast Notification --- */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #2d3748;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+        
+        #toast.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* --- Responsive Design --- */
+        @media (min-width: 640px) {
+            .entry-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <header>
+            <h1>Lottery Ledger</h1>
+        </header>
+
+        <nav>
+            <button class="nav-btn active" data-page="daily-entry-page">Daily Entry</button>
+            <button class="nav-btn" data-page="report-page">Weekly Report</button>
+            <button class="nav-btn" data-page="settings-page">Settings</button>
+        </nav>
+
+        <main>
+            <!-- Page 1: Daily Entry -->
+            <section id="daily-entry-page" class="page active">
+                <p id="date-header" class="date-header"></p>
+                <div class="entry-grid">
+                    <div class="entry-card" id="morning">
+                        <h2>Morning ☀️</h2>
+                        <div class="form-group">
+                            <label for="morning-in">Tickets In</label>
+                            <input type="number" id="morning-in" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="morning-return">Tickets Return</label>
+                            <input type="number" id="morning-return" placeholder="0">
+                        </div>
+                        <div class="result">
+                            <p>Sold: <span id="morning-sold">0</span></p>
+                            <p>Total: ₹<span id="morning-total">0.00</span></p>
+                        </div>
+                    </div>
+                    <div class="entry-card" id="day">
+                        <h2>Day 🌤️</h2>
+                        <div class="form-group">
+                            <label for="day-in">Tickets In</label>
+                            <input type="number" id="day-in" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="day-return">Tickets Return</label>
+                            <input type="number" id="day-return" placeholder="0">
+                        </div>
+                        <div class="result">
+                            <p>Sold: <span id="day-sold">0</span></p>
+                            <p>Total: ₹<span id="day-total">0.00</span></p>
+                        </div>
+                    </div>
+                    <div class="entry-card" id="night">
+                        <h2>Night 🌙</h2>
+                        <div class="form-group">
+                            <label for="night-in">Tickets In</label>
+                            <input type="number" id="night-in" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="night-return">Tickets Return</label>
+                            <input type="number" id="night-return" placeholder="0">
+                        </div>
+                        <div class="result">
+                            <p>Sold: <span id="night-sold">0</span></p>
+                            <p>Total: ₹<span id="night-total">0.00</span></p>
+                        </div>
+                    </div>
+                </div>
+                <button id="save-entry-btn">Save Entry</button>
+            </section>
+
+            <!-- Page 2: Weekly Report -->
+            <section id="report-page" class="page">
+                <div class="report-controls">
+                    <label for="week-picker">Select Week:</label>
+                    <input type="date" id="week-picker">
+                    <button id="export-pdf-btn">Download PDF</button>
+                </div>
+                <div id="report-table-container">
+                    <table id="report-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                        <tfoot></tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Page 3: Settings -->
+            <section id="settings-page" class="page">
+                <div class="settings-group">
+                    <h3>Ticket Rate</h3>
+                    <div class="form-group">
+                        <label for="ticket-rate">Rate per Ticket (e.g., 4.30)</label>
+                        <input type="number" id="ticket-rate" step="0.01">
+                    </div>
+                    <button id="btn-save-rate" class="btn-setting">Save Rate</button>
+                </div>
+                <div class="settings-group">
+                    <h3>Data Management</h3>
+                    <button id="btn-backup" class="btn-setting">Backup Data</button>
+                    <input type="file" id="restore-input" class="hidden">
+                    <button id="btn-restore" class="btn-setting">Restore from Backup</button>
+                    <button id="btn-clear" class="btn-setting">Clear All Data</button>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <div id="toast"></div>
+
+    <script>
+        // JAVASCRIPT LOGIC
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- DESTRUCTURE JSPDF ---
+            const { jsPDF } = window.jspdf;
+
+            // --- CONSTANTS ---
+            const DB_KEY = 'lotteryLedgerData';
+            const SETTINGS_KEY = 'lotteryLedgerSettings';
+            
+            // --- STATE ---
+            let currentDate = new Date(); // Holds the date for the entry page
+            
+            // --- SELECTORS ---
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const pages = document.querySelectorAll('.page');
+            const toast = document.getElementById('toast');
+            
+            // --- INITIALIZATION ---
+            function init() {
+                setupNavigation();
+                setupDailyEntryPage();
+                setupReportPage();
+                setupSettingsPage();
+                
+                // Show default page
+                document.getElementById('daily-entry-page').classList.add('active');
+            }
+
+            // --- UTILITY FUNCTIONS ---
+            const showToast = (message) => {
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            };
+
+            const formatDate = (date) => date.toISOString().split('T')[0];
+            
+            // --- STORAGE FUNCTIONS ---
+            const getSettings = () => JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { ticketRate: 4.30 };
+            const saveSettings = (settings) => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+            const getEntries = () => JSON.parse(localStorage.getItem(DB_KEY)) || [];
+            const saveEntries = (entries) => localStorage.setItem(DB_KEY, JSON.stringify(entries));
+
+            // --- NAVIGATION ---
+            function setupNavigation() {
+                navButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const targetPageId = btn.dataset.page;
+                        
+                        // Update active button
+                        navButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        
+                        // Update active page
+                        pages.forEach(p => p.classList.remove('active'));
+                        document.getElementById(targetPageId).classList.add('active');
+
+                        // Refresh report when navigating to it
+                        if (targetPageId === 'report-page') {
+                            generateReport(new Date(document.getElementById('week-picker').value || Date.now()));
+                        }
+                    });
+                });
+            }
+
+            // --- DAILY ENTRY PAGE LOGIC ---
+            function setupDailyEntryPage() {
+                const dateHeader = document.getElementById('date-header');
+                const saveButton = document.getElementById('save-entry-btn');
+                const sessionNames = ['morning', 'day', 'night'];
+
+                const updateDateHeader = () => {
+                    dateHeader.textContent = currentDate.toLocaleDateString('en-GB', {
+                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                    });
+                };
+                
+                const calculateSession = (session) => {
+                    const rate = getSettings().ticketRate;
+                    const inVal = parseInt(document.getElementById(`${session}-in`).value) || 0;
+                    const returnVal = parseInt(document.getElementById(`${session}-return`).value) || 0;
+                    const soldVal = Math.max(0, inVal - returnVal);
+                    
+                    document.getElementById(`${session}-sold`).textContent = soldVal;
+                    document.getElementById(`${session}-total`).textContent = (soldVal * rate).toFixed(2);
+                };
+
+                const loadEntryForDate = () => {
+                    const dateStr = formatDate(currentDate);
+                    const entries = getEntries();
+                    const entry = entries.find(e => e.date === dateStr);
+
+                    sessionNames.forEach(session => {
+                        const inEl = document.getElementById(`${session}-in`);
+                        const returnEl = document.getElementById(`${session}-return`);
+                        if (entry && entry.sessions[session]) {
+                            inEl.value = entry.sessions[session].in || '';
+                            returnEl.value = entry.sessions[session].return || '';
+                        } else {
+                            inEl.value = '';
+                            returnEl.value = '';
+                        }
+                        calculateSession(session);
+                    });
+                };
+
+                const handleSave = () => {
+                    const dateStr = formatDate(currentDate);
+                    let entries = getEntries();
+                    const entryIndex = entries.findIndex(e => e.date === dateStr);
+                    
+                    const newEntryData = {
+                        sessions: {
+                            morning: { in: parseInt(document.getElementById('morning-in').value) || 0, return: parseInt(document.getElementById('morning-return').value) || 0 },
+                            day: { in: parseInt(document.getElementById('day-in').value) || 0, return: parseInt(document.getElementById('day-return').value) || 0 },
+                            night: { in: parseInt(document.getElementById('night-in').value) || 0, return: parseInt(document.getElementById('night-return').value) || 0 }
+                        }
+                    };
+
+                    if (entryIndex > -1) {
+                        entries[entryIndex] = { date: dateStr, ...newEntryData };
+                    } else {
+                        entries.push({ date: dateStr, ...newEntryData });
+                    }
+
+                    saveEntries(entries);
+                    showToast(`Entry for ${dateStr} saved successfully!`);
+                };
+                
+                // Event Listeners
+                sessionNames.forEach(session => {
+                    ['in', 'return'].forEach(type => {
+                        document.getElementById(`${session}-${type}`).addEventListener('input', () => calculateSession(session));
+                    });
+                });
+                saveButton.addEventListener('click', handleSave);
+
+                // Check for edit request from session storage
+                const editDate = sessionStorage.getItem('editDate');
+                if (editDate) {
+                    currentDate = new Date(editDate);
+                    sessionStorage.removeItem('editDate');
+                }
+                
+                updateDateHeader();
+                loadEntryForDate();
+            }
+
+            // --- REPORT PAGE LOGIC ---
+            function setupReportPage() {
+                const weekPicker = document.getElementById('week-picker');
+                const exportPdfBtn = document.getElementById('export-pdf-btn');
+
+                weekPicker.value = formatDate(new Date());
+                weekPicker.addEventListener('change', () => generateReport(new Date(weekPicker.value)));
+                exportPdfBtn.addEventListener('click', exportToPDF);
+
+                generateReport(new Date()); // Initial report for current week
+            }
+
+            function generateReport(selectedDate) {
+                const rate = getSettings().ticketRate;
+                const dayOfWeek = selectedDate.getDay();
+                const startOfWeek = new Date(selectedDate);
+                // Adjust to start of the week (Monday)
+                startOfWeek.setDate(selectedDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+
+                const tableBody = document.querySelector('#report-table tbody');
+                const tableFoot = document.querySelector('#report-table tfoot');
+                const tableHead = document.querySelector('#report-table thead');
+                
+                tableHead.innerHTML = `
+                    <tr>
+                        <th>Date</th>
+                        <th>Session</th>
+                        <th>In</th>
+                        <th>Return</th>
+                        <th>Sold</th>
+                        <th>Amount (₹)</th>
+                        <th>Action</th>
+                    </tr>`;
+                tableBody.innerHTML = ''; // Clear previous report
+
+                let weekTotals = { in: 0, return: 0, sold: 0, amount: 0 };
+
+                for (let i = 0; i < 7; i++) {
+                    const day = new Date(startOfWeek);
+                    day.setDate(startOfWeek.getDate() + i);
+                    const dateStr = formatDate(day);
+                    
+                    const entry = getEntries().find(e => e.date === dateStr);
+                    let dayTotals = { in: 0, return: 0, sold: 0, amount: 0 };
+                    
+                    let dayHtml = '';
+                    ['morning', 'day', 'night'].forEach(session => {
+                        const s_in = entry?.sessions[session]?.in || 0;
+                        const s_ret = entry?.sessions[session]?.return || 0;
+                        const s_sold = s_in - s_ret;
+                        const s_amt = s_sold * rate;
+
+                        dayTotals.in += s_in;
+                        dayTotals.return += s_ret;
+                        dayTotals.sold += s_sold;
+                        dayTotals.amount += s_amt;
+                        
+                        dayHtml += `
+                            <tr>
+                                ${session === 'morning' ? `<td rowspan="4" style="vertical-align: top;">${day.toLocaleDateString('en-GB', {day: '2-digit', month:'short'})}<br>${day.toLocaleDateString('en-GB', {weekday: 'short'})}</td>` : ''}
+                                <td>${session.charAt(0).toUpperCase() + session.slice(1)}</td>
+                                <td>${s_in}</td>
+                                <td>${s_ret}</td>
+                                <td>${s_sold}</td>
+                                <td>${s_amt.toFixed(2)}</td>
+                                ${session === 'morning' ? `<td rowspan="4" style="vertical-align: middle;"><button class="edit-entry-btn" data-date="${dateStr}">Edit</button></td>` : ''}
+                            </tr>`;
+                    });
+                    
+                    dayHtml += `<tr style="font-weight: bold; background-color: #f8fafc;"><td>Total</td><td>${dayTotals.in}</td><td>${dayTotals.return}</td><td>${dayTotals.sold}</td><td>${dayTotals.amount.toFixed(2)}</td></tr>`;
+                    tableBody.innerHTML += dayHtml;
+
+                    weekTotals.in += dayTotals.in;
+                    weekTotals.return += dayTotals.return;
+                    weekTotals.sold += dayTotals.sold;
+                    weekTotals.amount += dayTotals.amount;
+                }
+                
+                tableFoot.innerHTML = `
+                    <tr>
+                        <td colspan="2">Grand Total</td>
+                        <td>${weekTotals.in}</td>
+                        <td>${weekTotals.return}</td>
+                        <td>${weekTotals.sold}</td>
+                        <td>${weekTotals.amount.toFixed(2)}</td>
+                        <td></td>
+                    </tr>`;
+
+                // Add event listeners to new edit buttons
+                document.querySelectorAll('.edit-entry-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        sessionStorage.setItem('editDate', e.target.dataset.date);
+                        window.location.reload(); // Simple way to re-initiate the entry page with the date
+                    });
+                });
+            }
+            
+            function exportToPDF() {
+                const doc = new jsPDF();
+                const selectedDate = new Date(document.getElementById('week-picker').value);
+                 const dayOfWeek = selectedDate.getDay();
+                const startOfWeek = new Date(selectedDate);
+                startOfWeek.setDate(selectedDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+
+                doc.text("Weekly Lottery Sales Report", 14, 16);
+                doc.setFontSize(10);
+                doc.text(`Week: ${startOfWeek.toLocaleDateString('en-GB')} to ${endOfWeek.toLocaleDateString('en-GB')}`, 14, 22);
+                
+                doc.autoTable({
+                    html: '#report-table',
+                    startY: 28,
+                    theme: 'grid',
+                    headStyles: { fillColor: [79, 70, 229] },
+                    footStyles: { fillColor: [241, 245, 249], textColor: '#000', fontStyle: 'bold' }
+                });
+                
+                doc.save(`lottery-report-${formatDate(startOfWeek)}.pdf`);
+            }
+
+            // --- SETTINGS PAGE LOGIC ---
+            function setupSettingsPage() {
+                const rateInput = document.getElementById('ticket-rate');
+                const saveRateBtn = document.getElementById('btn-save-rate');
+                const backupBtn = document.getElementById('btn-backup');
+                const restoreBtn = document.getElementById('btn-restore');
+                const restoreInput = document.getElementById('restore-input');
+                const clearBtn = document.getElementById('btn-clear');
+                
+                rateInput.value = getSettings().ticketRate;
+
+                saveRateBtn.addEventListener('click', () => {
+                    const newRate = parseFloat(rateInput.value);
+                    if (newRate > 0) {
+                        saveSettings({ ticketRate: newRate });
+                        showToast('Ticket rate updated!');
+                    } else {
+                        showToast('Please enter a valid rate.');
+                    }
+                });
+
+                backupBtn.addEventListener('click', () => {
+                    const data = {
+                        entries: getEntries(),
+                        settings: getSettings()
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `lottery-ledger-backup-${formatDate(new Date())}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('Backup file created.');
+                });
+
+                restoreBtn.addEventListener('click', () => restoreInput.click());
+                restoreInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            if (data.entries && data.settings) {
+                                saveEntries(data.entries);
+                                saveSettings(data.settings);
+                                showToast('Data restored successfully!');
+                                setTimeout(() => window.location.reload(), 1000);
+                            } else {
+                                showToast('Invalid backup file.');
+                            }
+                        } catch (err) {
+                            showToast('Error reading backup file.');
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+
+                clearBtn.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to delete ALL data? This cannot be undone.')) {
+                        localStorage.removeItem(DB_KEY);
+                        localStorage.removeItem(SETTINGS_KEY);
+                        showToast('All data has been cleared.');
+                        setTimeout(() => window.location.reload(), 1000);
+                    }
+                });
+            }
+
+            // Start the application
+            init();
+        });
+    </script>
+
+</body>
+</html>
